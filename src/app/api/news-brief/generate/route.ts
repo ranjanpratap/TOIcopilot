@@ -520,32 +520,138 @@ export async function POST(req: NextRequest) {
     }
 
     if (options.newsImage) {
-      output.imagePrompt = `Editorial photo concept: A high-impact, newsroom-style wide shot capturing the essence of "${topic}". Photorealistic, documentary style, front-page worthy. No text overlay. Suitable for Times of India print and digital.`;
-      
-      try {
-        // Using Imagen 3 via the Gemini API
-        const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GEMINI_API_KEY}`;
-        const imgRes = await fetch(imagenUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            instances: [{ prompt: output.imagePrompt }],
-            parameters: { sampleCount: 1 }
-          }),
-        });
-        
-        if (imgRes.ok) {
-          const imgData = await imgRes.json();
-          const base64 = imgData.predictions?.[0]?.bytesBase64Encoded;
-          if (base64) {
-            output.imageUrl = `data:image/png;base64,${base64}`;
+      // ── System prompt (editorial quality, entity-grounded) ─────────────────
+      const editorContext = [
+        topic ? `Headline: "${topic}"` : "",
+        content?.trim() ? `News content: ${content.trim().slice(0, 600)}` : "",
+      ].filter(Boolean).join("\n");
+
+      const SYSTEM_PROMPT =
+        `Carefully read and analyze everything shared by the editor, including headline, pasted news content, ` +
+        `event details, summary, and any related context. Identify important people, famous personalities, places, ` +
+        `landmarks, objects, events, political context, and visual cues mentioned in the input. ` +
+        `Create a photorealistic, editorial-quality news image inspired by those details, suitable for Times of India ` +
+        `style digital and print usage. The image should visually represent the core news event and should be grounded ` +
+        `in the entities and context provided by the editor, not generic imagery. If a famous person, public figure, ` +
+        `known place, or recognizable event is mentioned, the visual should be built around that context. ` +
+        `Keep the image clean, realistic, high-impact, newsroom appropriate, and without unnecessary text overlay ` +
+        `unless explicitly requested.\n\n${editorContext}`;
+
+      // Brief version for the photo brief display (no system prompt boilerplate)
+      const briefPrompt =
+        `Editorial news photograph for Times of India. ${editorContext}. ` +
+        `Photorealistic, documentary style, wide-angle composition, natural lighting, front-page quality. No text overlays.`;
+
+      output.imagePrompt = briefPrompt;
+
+      // ── 1. Imagen 4 via /predict endpoint ─────────────────────────────────────
+      if (!output.imageUrl) {
+        try {
+          const predictEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_API_KEY}`;
+          const imgRes = await fetch(predictEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              instances: [{ prompt: SYSTEM_PROMPT.slice(0, 1000) }],
+              parameters: { sampleCount: 1, aspectRatio: "16:9" },
+            }),
+            signal: AbortSignal.timeout(30_000),
+          });
+
+          if (imgRes.ok) {
+            const imgData = await imgRes.json();
+            const prediction = imgData.predictions?.[0];
+            if (prediction?.bytesBase64Encoded) {
+              const mime = prediction.mimeType ?? "image/png";
+              output.imageUrl = `data:${mime};base64,${prediction.bytesBase64Encoded}`;
+              output.imageSource = "gemini";
+              console.log(`✓ Imagen 4 image generated (${prediction.bytesBase64Encoded.length} chars base64)`);
+            } else {
+              console.warn("Imagen 4 responded OK but no predictions found:", JSON.stringify(imgData).slice(0, 200));
+            }
+          } else {
+            const errText = await imgRes.text().catch(() => "");
+            console.warn(`Imagen 4 HTTP ${imgRes.status}:`, errText.slice(0, 120));
           }
-        } else {
-          // Fallback to high-quality generated image service if Imagen API fails
-          output.imageUrl = `https://pollinations.ai/p/${encodeURIComponent(output.imagePrompt)}?width=1024&height=576&nologo=true&seed=${Math.floor(Math.random() * 1000)}`;
+        } catch (e) {
+          console.warn("Imagen 4 error:", (e as Error).message.slice(0, 120));
         }
-      } catch (e) {
-        console.error("Gemini Image generation failed:", e);
+      }
+
+      // ── 2. Gemini generateContent image models (newer preview models) ─────────
+      const GEMINI_IMG_MODELS = [
+        "gemini-3.1-flash-image-preview",
+        "gemini-3-pro-image-preview",
+      ];
+
+      for (const modelName of GEMINI_IMG_MODELS) {
+        if (output.imageUrl) break;
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+          const imgRes = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: SYSTEM_PROMPT }] }],
+              generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+            }),
+            signal: AbortSignal.timeout(25_000),
+          });
+
+          if (!imgRes.ok) {
+            console.warn(`Gemini image [${modelName}] HTTP ${imgRes.status}`);
+            continue;
+          }
+
+          const imgData = await imgRes.json();
+          const rawParts = imgData.candidates?.[0]?.content?.parts ?? [];
+          const typedParts: Array<{ inlineData?: { mimeType: string; data: string }; text?: string }> = rawParts;
+          const inlinePart = typedParts.find((p) => p.inlineData?.data);
+
+          if (inlinePart?.inlineData) {
+            output.imageUrl = `data:${inlinePart.inlineData.mimeType};base64,${inlinePart.inlineData.data}`;
+            output.imageSource = "gemini";
+            console.log(`✓ Gemini image generated via ${modelName} (${inlinePart.inlineData.data.length} chars base64)`);
+          } else {
+            console.warn(`Gemini [${modelName}] responded OK but no inlineData found`);
+          }
+        } catch (e) {
+          console.warn(`Gemini image [${modelName}] error:`, (e as Error).message.slice(0, 120));
+        }
+      }
+
+      // ── 3. Pollinations fallback — fetch server-side → base64 data URL ────────
+      // Fetching server-side avoids all browser cross-origin / content-type issues.
+      if (!output.imageUrl) {
+        try {
+          const seed = Math.floor(Math.random() * 999_999);
+          const promptText = `${topic} news editorial photorealistic ${
+            content?.trim().slice(0, 200) ?? ""
+          } Times of India style journalism`.slice(0, 450);
+          const encoded = encodeURIComponent(promptText);
+          const pollinationsUrl = `https://image.pollinations.ai/prompt/${encoded}?width=1280&height=720&nologo=true&model=flux&seed=${seed}`;
+
+          console.log("Fetching Pollinations image server-side:", pollinationsUrl.slice(0, 120));
+          const polRes = await fetch(pollinationsUrl, {
+            signal: AbortSignal.timeout(30_000),
+            headers: { "User-Agent": "TOI-Editor-Copilot/1.0" },
+          });
+
+          if (polRes.ok) {
+            const contentType = polRes.headers.get("content-type") ?? "image/jpeg";
+            // Normalise to a browser-safe MIME type
+            const mime = contentType.startsWith("image/") ? contentType.split(";")[0].trim() : "image/jpeg";
+            const arrayBuf = await polRes.arrayBuffer();
+            const base64 = Buffer.from(arrayBuf).toString("base64");
+            output.imageUrl = `data:${mime};base64,${base64}`;
+            output.imageSource = "pollinations";
+            console.log(`✓ Pollinations image fetched server-side (${base64.length} chars base64, ${mime})`);
+          } else {
+            console.warn(`Pollinations HTTP ${polRes.status}`);
+          }
+        } catch (e) {
+          console.warn("Pollinations fetch error:", (e as Error).message.slice(0, 120));
+        }
       }
     }
 

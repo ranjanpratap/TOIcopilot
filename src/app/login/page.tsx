@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, CheckCircle2, TrendingUp, FileSearch, ShieldCheck, Video, Newspaper } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, TrendingUp, FileSearch, Video, Search, Newspaper } from "lucide-react";
 
 const VALID_USER = "pratap";
 const VALID_PASS = "123456";
@@ -10,8 +10,8 @@ const VALID_PASS = "123456";
 const features = [
   { icon: TrendingUp, text: "Track trending topics in real time" },
   { icon: FileSearch, text: "Generate high-CTR headlines with AI" },
-  { icon: ShieldCheck, text: "Verify facts instantly before publishing" },
-  { icon: Video, text: "Create short news videos in minutes" },
+  { icon: Search,     text: "Detect content gaps vs competitors" },
+  { icon: Video,      text: "Create short news videos in minutes" },
 ];
 
 export default function LoginPage() {

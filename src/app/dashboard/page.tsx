@@ -6,7 +6,6 @@ import RecentActivity from "@/components/RecentActivity";
 import {
   Newspaper,
   Search,
-  ShieldCheck,
   Video,
   RefreshCw,
   BarChart3,
@@ -28,7 +27,7 @@ const FEATURE_CARDS = [
     title: "Content Gap Detector",
     icon: Search,
     accentColor: "#7C3AED",
-    href: null,
+    href: "/dashboard/content-gap",
     stats: [
       { label: "Missed stories", value: "8" },
       { label: "Competitors tracked", value: "12" },
@@ -36,21 +35,10 @@ const FEATURE_CARDS = [
     ],
   },
   {
-    title: "Fact Checker",
-    icon: ShieldCheck,
-    accentColor: "#059669",
-    href: null,
-    stats: [
-      { label: "Articles verified", value: "19" },
-      { label: "Risk flags", value: "5" },
-      { label: "Avg credibility score", value: "84%" },
-    ],
-  },
-  {
     title: "Short News Video Builder",
     icon: Video,
     accentColor: "#E21B22",
-    href: null,
+    href: "/dashboard/video-builder",
     stats: [
       { label: "Videos created", value: "7" },
       { label: "Avg generation time", value: "2.4 min" },
@@ -110,27 +98,17 @@ export default function DashboardPage() {
             Module Overview
           </h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {FEATURE_CARDS.map((card) =>
-            card.href ? (
-              <Link key={card.title} href={card.href} className="block">
-                <FeatureCard
-                  title={card.title}
-                  icon={card.icon}
-                  stats={card.stats}
-                  accentColor={card.accentColor}
-                />
-              </Link>
-            ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {FEATURE_CARDS.map((card) => (
+            <Link key={card.title} href={card.href} className="block">
               <FeatureCard
-                key={card.title}
                 title={card.title}
                 icon={card.icon}
                 stats={card.stats}
                 accentColor={card.accentColor}
               />
-            )
-          )}
+            </Link>
+          ))}
         </div>
       </section>
 

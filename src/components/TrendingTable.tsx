@@ -7,7 +7,6 @@ import {
   Filter,
   FileText,
   Search,
-  ShieldCheck,
   Video,
   ChevronUp,
   ChevronDown,
@@ -324,7 +323,6 @@ export default function TrendingTable() {
                         <div className="flex items-center gap-1">
                           <ActionButton icon={FileText} label="Brief" color="#0050B3" />
                           <ActionButton icon={Search} label="Gap" color="#6B7280" />
-                          <ActionButton icon={ShieldCheck} label="Fact" color="#6B7280" />
                           <ActionButton icon={Video} label="Video" color="#6B7280" />
                         </div>
                       </td>

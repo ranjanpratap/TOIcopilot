@@ -3,7 +3,6 @@
 import {
   FileText,
   Search,
-  ShieldCheck,
   BarChart2,
   Hash,
   Compass,

@@ -389,6 +389,35 @@ const TOI_FEEDS: [string, string][] = [
   ["https://timesofindia.indiatimes.com/rssfeeds/1081479906.cms", "Entertainment"],
 ];
 
+// ── Google News RSS for TOI (used when TOI RSS is blocked) ────────────────────
+// Google News indexes TOI and returns its RSS without server restrictions.
+const TOI_GNEWS_FEEDS: string[] = [
+  "https://news.google.com/rss/search?q=site:timesofindia.indiatimes.com&hl=en-IN&gl=IN&ceid=IN:en",
+  "https://news.google.com/rss/search?q=site:timesofindia.indiatimes.com+india&hl=en-IN&gl=IN&ceid=IN:en",
+  "https://news.google.com/rss/search?q=site:timesofindia.indiatimes.com+world&hl=en-IN&gl=IN&ceid=IN:en",
+  "https://news.google.com/rss/search?q=site:timesofindia.indiatimes.com+business&hl=en-IN&gl=IN&ceid=IN:en",
+  "https://news.google.com/rss/search?q=site:timesofindia.indiatimes.com+sports&hl=en-IN&gl=IN&ceid=IN:en",
+];
+
+async function fetchTOIViaGoogleNews(): Promise<Article[]> {
+  const results = await Promise.allSettled(
+    TOI_GNEWS_FEEDS.map((url) =>
+      fetch(url, {
+        headers: { "User-Agent": UA, "Accept": "application/rss+xml, application/xml, text/xml, */*" },
+        signal: AbortSignal.timeout(8_000),
+      })
+        .then((r) => (r.ok ? r.text() : Promise.reject(r.status)))
+        .then((xml) => parseRSS(xml, "Times of India"))
+    )
+  );
+
+  const map = new Map<string, Article>();
+  results.forEach((r) => {
+    if (r.status === "fulfilled") r.value.forEach((a) => map.set(a.id, a));
+  });
+  return [...map.values()];
+}
+
 const COMPETITOR_FEEDS: [string, string][] = [
   ["https://www.indiatoday.in/rss/home",                             "India Today"],
   ["https://www.hindustantimes.com/rss/topnews/rssfeed.xml",         "Hindustan Times"],
@@ -425,8 +454,14 @@ export async function GET() {
     if (r.status === "fulfilled") r.value.forEach((a) => toiMap.set(a.id, a));
   });
 
+  // Level 2: if TOI RSS was blocked, try via Google News (which indexes TOI freely)
+  if (toiMap.size === 0) {
+    const gnews = await fetchTOIViaGoogleNews();
+    gnews.forEach((a) => toiMap.set(a.id, a));
+  }
+
   const competitorArticles = [...compMap.values()];
-  // Use live TOI articles; fall back to broad coverage set if RSS unavailable
+  // Level 3: if both live sources fail, use the broad topic fallback
   const toiArticles = toiMap.size > 0 ? [...toiMap.values()] : fallbackTOIArticles();
   const toiIndexed  = toiMap.size;
 

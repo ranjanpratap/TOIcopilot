@@ -86,4 +86,6 @@ export interface GeneratedOutput {
   competitors?: CompetitorItem[];
   competitorMetrics?: CompetitorMetrics;
   imagePrompt?: string;
+  imageUrl?: string;
+  imageSource?: "gemini" | "pollinations";
 }
