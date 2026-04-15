@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ShieldCheck,
   FileText,
   Video,
   TrendingUp,
@@ -10,7 +9,7 @@ import {
   Clock,
 } from "lucide-react";
 
-type ActivityType = "fact-check" | "headline" | "video" | "trend" | "gap";
+type ActivityType = "headline" | "video" | "trend" | "gap";
 
 interface Activity {
   id: number;
@@ -25,15 +24,6 @@ interface Activity {
 const ACTIVITIES: Activity[] = [
   {
     id: 1,
-    type: "fact-check",
-    action: "Fact check completed",
-    subject: "Fuel Price Hike Claims",
-    user: "Pratap",
-    timestamp: "8 min ago",
-    status: "completed",
-  },
-  {
-    id: 2,
     type: "headline",
     action: "Headline suggestions generated",
     subject: "Supreme Court Verdict on Electoral Bonds",
@@ -42,7 +32,7 @@ const ACTIVITIES: Activity[] = [
     status: "completed",
   },
   {
-    id: 3,
+    id: 2,
     type: "video",
     action: "Short video storyboard created",
     subject: "IPL Controversy - Match Fixing Allegations",
@@ -51,7 +41,7 @@ const ACTIVITIES: Activity[] = [
     status: "completed",
   },
   {
-    id: 4,
+    id: 3,
     type: "trend",
     action: "Trend analysis run",
     subject: "India EV Policy 2025",
@@ -60,7 +50,7 @@ const ACTIVITIES: Activity[] = [
     status: "completed",
   },
   {
-    id: 5,
+    id: 4,
     type: "gap",
     action: "Content gap analysis",
     subject: "RBI Interest Rate Coverage vs Competitors",
@@ -69,13 +59,13 @@ const ACTIVITIES: Activity[] = [
     status: "completed",
   },
   {
-    id: 6,
-    type: "fact-check",
-    action: "Fact check in progress",
-    subject: "Budget Leak Viral Claim",
+    id: 5,
+    type: "video",
+    action: "Short video generated",
+    subject: "India EV Policy — 30s News Brief",
     user: "Pratap",
-    timestamp: "2.5 hr ago",
-    status: "in-progress",
+    timestamp: "3 hr ago",
+    status: "completed",
   },
 ];
 
@@ -85,11 +75,10 @@ const typeConfig: Record<ActivityType, {
   iconColor: string;
   label: string;
 }> = {
-  "fact-check": { icon: ShieldCheck, iconBg: "bg-green-100", iconColor: "text-green-600", label: "Fact Check" },
-  "headline":   { icon: FileText,   iconBg: "bg-blue-100",  iconColor: "text-[#0050B3]",  label: "Headline" },
-  "video":      { icon: Video,      iconBg: "bg-purple-100",iconColor: "text-purple-600",  label: "Video" },
-  "trend":      { icon: TrendingUp, iconBg: "bg-orange-100",iconColor: "text-orange-600",  label: "Trend" },
-  "gap":        { icon: Search,     iconBg: "bg-gray-100",  iconColor: "text-gray-600",    label: "Content Gap" },
+  "headline": { icon: FileText,   iconBg: "bg-blue-100",  iconColor: "text-[#0050B3]", label: "Headline"    },
+  "video":    { icon: Video,      iconBg: "bg-purple-100",iconColor: "text-purple-600", label: "Video"       },
+  "trend":    { icon: TrendingUp, iconBg: "bg-orange-100",iconColor: "text-orange-600", label: "Trend"       },
+  "gap":      { icon: Search,     iconBg: "bg-gray-100",  iconColor: "text-gray-600",   label: "Content Gap" },
 };
 
 export default function RecentActivity() {

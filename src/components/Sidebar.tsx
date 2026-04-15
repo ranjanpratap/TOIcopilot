@@ -5,7 +5,6 @@ import {
   Home,
   Newspaper,
   Search,
-  ShieldCheck,
   Video,
   BookMarked,
   Clock,
@@ -31,11 +30,6 @@ const navItems = [
     label: "Content Gap Detector",
     icon: Search,
     href: "/dashboard/content-gap",
-  },
-  {
-    label: "Fact Checker",
-    icon: ShieldCheck,
-    href: "/dashboard/fact-checker",
   },
   {
     label: "Short News Video Builder",
@@ -64,7 +58,7 @@ export default function Sidebar({ onNavigate, onClose }: SidebarProps) {
     router.push("/login");
   };
 
-  const ACTIVE_ROUTES = new Set(["/dashboard", "/dashboard/news-brief", "/dashboard/content-gap"]);
+  const ACTIVE_ROUTES = new Set(["/dashboard", "/dashboard/news-brief", "/dashboard/content-gap", "/dashboard/video-builder"]);
 
   const handleNav = (href: string) => {
     if (onClose) onClose();

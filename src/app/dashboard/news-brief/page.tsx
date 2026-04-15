@@ -5,11 +5,12 @@ import Link from "next/link";
 import {
   ChevronRight,
   Newspaper,
-  Plus,
   Zap,
   X,
   Image as ImageIcon,
   BarChart2,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 
 import NewsInputPanel from "@/components/news-brief/NewsInputPanel";
@@ -37,6 +38,99 @@ const LOADING_STEPS = [
   "Identifying story angles...",
   "Finalising analysis...",
 ];
+
+// ─── News Image Block ──────────────────────────────────────────────────────────
+function NewsImageBlock({
+  imageUrl,
+  imagePrompt,
+  imageSource,
+  topic,
+}: {
+  imageUrl?: string;
+  imagePrompt: string;
+  imageSource?: "gemini" | "pollinations";
+  topic: string;
+}) {
+  const [imgState, setImgState] = useState<"loading" | "loaded" | "error">(
+    imageUrl ? "loading" : "error",
+  );
+
+  // Reset when a new image URL arrives
+  useEffect(() => {
+    setImgState(imageUrl ? "loading" : "error");
+  }, [imageUrl]);
+
+  return (
+    <div className="bg-white border border-[#E2E6ED]">
+      <div className="px-5 py-3.5 border-b border-[#E2E6ED] flex items-center gap-2">
+        <ImageIcon className="w-4 h-4 text-[#7C3AED]" />
+        <h3 className="font-bold text-[#333333] text-[14px]">News Image Concept</h3>
+        {imageSource && imgState === "loaded" && (
+          <span className={`ml-auto px-2 py-0.5 text-[10px] font-bold ${
+            imageSource === "gemini"
+              ? "bg-[#EDE9FE] text-[#7C3AED]"
+              : "bg-[#F5F6F8] text-[#6B7280]"
+          }`}>
+            {imageSource === "gemini" ? "AI GENERATED" : "AI GENERATED"}
+          </span>
+        )}
+      </div>
+
+      <div className="p-5 space-y-4">
+        {/* Image container */}
+        {imageUrl ? (
+          <div className="relative border border-[#E2E6ED] overflow-hidden bg-[#F5F6F8]" style={{ minHeight: "200px" }}>
+            {/* Loading shimmer */}
+            {imgState === "loading" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[#F5F6F8] z-10">
+                <Loader2 className="w-6 h-6 text-[#7C3AED] animate-spin" />
+                <p className="text-[12px] text-[#9AA5B4]">Generating editorial image...</p>
+              </div>
+            )}
+
+            {/* Error state */}
+            {imgState === "error" && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-[#F5F6F8] z-10 px-6">
+                <AlertCircle className="w-6 h-6 text-[#9AA5B4]" />
+                <p className="text-[12px] text-[#6B7280] text-center">
+                  Image could not be loaded. The editorial photo brief is shown below.
+                </p>
+              </div>
+            )}
+
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={imageUrl}
+              alt={`Editorial image: ${topic}`}
+              className="w-full object-cover"
+              style={{
+                maxHeight: "480px",
+                display: imgState === "error" ? "none" : "block",
+                opacity: imgState === "loading" ? 0 : 1,
+              }}
+              onLoad={() => setImgState("loaded")}
+              onError={() => {
+                console.error("News image failed to load:", imageUrl?.slice(0, 80));
+                setImgState("error");
+              }}
+            />
+          </div>
+        ) : (
+          <div className="border border-[#E2E6ED] bg-[#F5F6F8] flex flex-col items-center justify-center gap-2 py-10">
+            <AlertCircle className="w-5 h-5 text-[#9AA5B4]" />
+            <p className="text-[12px] text-[#6B7280]">Image generation did not return a result.</p>
+          </div>
+        )}
+
+        {/* Editorial photo brief */}
+        <div className="border-l-4 border-[#7C3AED] pl-3 bg-purple-50/50 py-3 pr-3">
+          <p className="text-[10px] font-bold text-[#7C3AED] uppercase tracking-wide mb-1">Editorial Photo Brief</p>
+          <p className="text-[13px] text-[#333333] leading-relaxed">{imagePrompt}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Empty state ───────────────────────────────────────────────────────────────
 function EmptyState() {
@@ -236,8 +330,8 @@ export default function NewsBriefPage() {
                 disabled={loading}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E21B22] hover:bg-[#C41519] text-white text-[11px] font-semibold transition-colors disabled:opacity-60"
               >
-                <Plus className="w-3.5 h-3.5" />
-                New Analysis
+                <Zap className="w-3.5 h-3.5" />
+                Generate Analysis
               </button>
             </div>
           </div>
@@ -367,20 +461,14 @@ export default function NewsBriefPage() {
                 <SEOKeywords seo={output.seoKeywords} />
               )}
 
-              {/* Image concept */}
+              {/* News Image Concept */}
               {output?.imagePrompt && (
-                <div className="bg-white border border-[#E2E6ED]">
-                  <div className="px-5 py-3.5 border-b border-[#E2E6ED] flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-[#7C3AED]" />
-                    <h3 className="font-bold text-[#333333] text-[14px]">News Image Concept</h3>
-                  </div>
-                  <div className="p-5">
-                    <div className="border-l-4 border-[#7C3AED] pl-3 bg-purple-50/50 py-3 pr-3">
-                      <p className="text-[10px] font-bold text-[#7C3AED] uppercase tracking-wide mb-1">Editorial Photo Brief</p>
-                      <p className="text-[13px] text-[#333333] leading-relaxed">{output.imagePrompt}</p>
-                    </div>
-                  </div>
-                </div>
+                <NewsImageBlock
+                  imageUrl={output.imageUrl}
+                  imagePrompt={output.imagePrompt}
+                  imageSource={output.imageSource}
+                  topic={topic}
+                />
               )}
 
               {/* Competitor Coverage */}
